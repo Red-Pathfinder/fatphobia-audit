@@ -5,7 +5,7 @@ from pathlib import Path
 import pandas as pd
 import torch
 from tqdm import tqdm
-from diffusers import AutoPipelineForText2Image
+from diffusers import StableDiffusion3Pipeline
 
 # =====================================================
 # Configuration
@@ -17,11 +17,14 @@ PROJECT_ROOT = SCRIPT_DIR.parent.parent.parent
 PROMPT_FILE = PROJECT_ROOT / "our_work" / "implementation" / "prompts" / "pilot_prompts.csv"
 OUTPUT_DIR = PROJECT_ROOT / "our_work" / "results" / "pilot"
 
-MODEL_ID = "stabilityai/sdxl-turbo"
+MODEL_ID = "stabilityai/stable-diffusion-3.5-large"
 
-NUM_IMAGES = 20          # Change to 1 for smoke test
-NUM_INFERENCE_STEPS = 1  # SDXL Turbo recommendation
-GUIDANCE_SCALE = 0.0
+NUM_IMAGES = 20                  # Change to 1 for smoke test
+NUM_INFERENCE_STEPS = 28         # Recommended 20–30
+GUIDANCE_SCALE = 4.5             # Recommended 3.5–5
+
+HEIGHT = 1024
+WIDTH = 1024
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 DTYPE = torch.float16
@@ -39,15 +42,17 @@ print(f"Loaded {len(prompts_df)} prompt pairs.")
 # Load Model
 # =====================================================
 
-print("Loading SDXL Turbo...")
+print("Loading Stable Diffusion 3.5 Large...")
 
-pipe = AutoPipelineForText2Image.from_pretrained(
+pipe = StableDiffusion3Pipeline.from_pretrained(
     MODEL_ID,
-    torch_dtype=DTYPE,
-    variant="fp16"
+    torch_dtype=DTYPE
 )
 
 pipe.to(DEVICE)
+
+# Optional VRAM optimization
+pipe.enable_attention_slicing()
 
 print("Model loaded.")
 
@@ -74,14 +79,18 @@ for _, row in prompts_df.iterrows():
         row["positive"]
     ]
 
-    for prompt in prompts:
+    for adjective in prompts:
 
-        folder = OUTPUT_DIR / prompt.replace(" ", "_")
+        # Match Warren et al. prompt style
+        prompt = f"A realistic photo of a person who is {adjective}."
+
+        folder_name = adjective.replace(" ", "_").replace("/", "_")
+        folder = OUTPUT_DIR / folder_name
         folder.mkdir(parents=True, exist_ok=True)
 
-        print(f"\nGenerating: {prompt}")
+        print(f"\nGenerating: {adjective}")
 
-        for seed in tqdm(range(NUM_IMAGES)):
+        for seed in tqdm(range(NUM_IMAGES), leave=False):
 
             try:
 
@@ -89,34 +98,37 @@ for _, row in prompts_df.iterrows():
 
                 image = pipe(
                     prompt=prompt,
+                    height=HEIGHT,
+                    width=WIDTH,
                     num_inference_steps=NUM_INFERENCE_STEPS,
                     guidance_scale=GUIDANCE_SCALE,
-                    generator=generator
+                    generator=generator,
                 ).images[0]
 
-                filename = f"{prompt.replace(' ','_')}_{seed:03d}.png"
+                filename = f"{folder_name}_{seed:03d}.png"
 
                 image.save(folder / filename)
 
                 metadata.append({
                     "pair_id": pair_id,
-                    "prompt": prompt,
+                    "prompt": adjective,
+                    "full_prompt": prompt,
                     "seed": seed,
                     "filename": filename,
                     "model": MODEL_ID,
                     "steps": NUM_INFERENCE_STEPS,
                     "guidance_scale": GUIDANCE_SCALE,
-                    "timestamp": datetime.now().isoformat()
+                    "height": HEIGHT,
+                    "width": WIDTH,
+                    "timestamp": datetime.now().isoformat(timespec="seconds")
                 })
 
             except Exception as e:
 
-                with open(error_log, "a") as f:
+                with open(error_log, "a", encoding="utf-8") as f:
                     f.write(
-                        f"{datetime.now()} | "
-                        f"{prompt} | "
-                        f"Seed {seed} | "
-                        f"{e}\n"
+                        f"{datetime.now().isoformat(timespec='seconds')} | "
+                        f"{adjective} | Seed {seed} | {e}\n"
                     )
 
                 print(f"Skipped seed {seed}")
