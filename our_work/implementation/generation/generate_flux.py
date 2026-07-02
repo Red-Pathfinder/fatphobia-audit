@@ -1,33 +1,36 @@
 import os
 from datetime import datetime
+from pathlib import Path
 
 import pandas as pd
 import torch
 from tqdm import tqdm
-from diffusers import FluxPipeline
+from diffusers import AutoPipelineForText2Image
 
 # =====================================================
 # Configuration
 # =====================================================
 
-PROMPT_FILE = "../prompts/pilot_prompts.csv"
-OUTPUT_DIR = "../../results/pilot"
+SCRIPT_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = SCRIPT_DIR.parent.parent.parent
 
-MODEL_ID = "black-forest-labs/FLUX.1-schnell"
+PROMPT_FILE = PROJECT_ROOT / "our_work" / "implementation" / "prompts" / "pilot_prompts.csv"
+OUTPUT_DIR = PROJECT_ROOT / "our_work" / "results" / "pilot"
 
-NUM_IMAGES = 20
-NUM_INFERENCE_STEPS = 4
+MODEL_ID = "stabilityai/sdxl-turbo"
+
+NUM_IMAGES = 20          # Change to 1 for smoke test
+NUM_INFERENCE_STEPS = 1  # SDXL Turbo recommendation
 GUIDANCE_SCALE = 0.0
-MAX_SEQUENCE_LENGTH = 256
 
-DEVICE_DTYPE = torch.bfloat16
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+DTYPE = torch.float16
 
 # =====================================================
 # Load Prompt CSV
 # =====================================================
 
 prompts_df = pd.read_csv(PROMPT_FILE)
-
 prompts_df = prompts_df[prompts_df["include"].str.lower() == "yes"]
 
 print(f"Loaded {len(prompts_df)} prompt pairs.")
@@ -36,26 +39,27 @@ print(f"Loaded {len(prompts_df)} prompt pairs.")
 # Load Model
 # =====================================================
 
-print("Loading FLUX.1 Schnell...")
+print("Loading SDXL Turbo...")
 
-pipe = FluxPipeline.from_pretrained(
+pipe = AutoPipelineForText2Image.from_pretrained(
     MODEL_ID,
-    torch_dtype=DEVICE_DTYPE
+    torch_dtype=DTYPE,
+    variant="fp16"
 )
 
-pipe.enable_model_cpu_offload()
+pipe.to(DEVICE)
 
 print("Model loaded.")
 
 # =====================================================
-# Prepare Outputs
+# Prepare Output
 # =====================================================
 
-os.makedirs(OUTPUT_DIR, exist_ok=True)
+OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 metadata = []
 
-error_log = os.path.join(OUTPUT_DIR, "error_log.txt")
+error_log = OUTPUT_DIR / "error_log.txt"
 
 # =====================================================
 # Generation Loop
@@ -65,45 +69,41 @@ for _, row in prompts_df.iterrows():
 
     pair_id = row["pair_id"]
 
-    prompt_list = [
+    prompts = [
         row["negative"],
         row["positive"]
     ]
 
-    for prompt in prompt_list:
+    for prompt in prompts:
 
-        prompt_folder = os.path.join(OUTPUT_DIR, prompt.replace(" ", "_"))
-        os.makedirs(prompt_folder, exist_ok=True)
+        folder = OUTPUT_DIR / prompt.replace(" ", "_")
+        folder.mkdir(parents=True, exist_ok=True)
 
         print(f"\nGenerating: {prompt}")
 
-        # Seed resets for every prompt
         for seed in tqdm(range(NUM_IMAGES)):
 
             try:
 
-                generator = torch.Generator("cpu").manual_seed(seed)
+                generator = torch.Generator(device=DEVICE).manual_seed(seed)
 
                 image = pipe(
                     prompt=prompt,
-                    guidance_scale=GUIDANCE_SCALE,
                     num_inference_steps=NUM_INFERENCE_STEPS,
-                    max_sequence_length=MAX_SEQUENCE_LENGTH,
+                    guidance_scale=GUIDANCE_SCALE,
                     generator=generator
                 ).images[0]
 
                 filename = f"{prompt.replace(' ','_')}_{seed:03d}.png"
 
-                image_path = os.path.join(prompt_folder, filename)
-
-                image.save(image_path)
+                image.save(folder / filename)
 
                 metadata.append({
                     "pair_id": pair_id,
                     "prompt": prompt,
                     "seed": seed,
                     "filename": filename,
-                    "model": "FLUX.1-schnell",
+                    "model": MODEL_ID,
                     "steps": NUM_INFERENCE_STEPS,
                     "guidance_scale": GUIDANCE_SCALE,
                     "timestamp": datetime.now().isoformat()
@@ -113,15 +113,13 @@ for _, row in prompts_df.iterrows():
 
                 with open(error_log, "a") as f:
                     f.write(
-                        f"[{datetime.now()}] "
-                        f"Prompt={prompt} "
-                        f"Seed={seed} "
-                        f"Error={str(e)}\n"
+                        f"{datetime.now()} | "
+                        f"{prompt} | "
+                        f"Seed {seed} | "
+                        f"{e}\n"
                     )
 
                 print(f"Skipped seed {seed}")
-
-                continue
 
 # =====================================================
 # Save Metadata
@@ -130,9 +128,9 @@ for _, row in prompts_df.iterrows():
 metadata_df = pd.DataFrame(metadata)
 
 metadata_df.to_csv(
-    os.path.join(OUTPUT_DIR, "metadata.csv"),
+    OUTPUT_DIR / "metadata.csv",
     index=False
 )
 
 print("\nGeneration Complete.")
-print(f"Images saved to: {OUTPUT_DIR}")
+print(f"Saved to {OUTPUT_DIR}")
