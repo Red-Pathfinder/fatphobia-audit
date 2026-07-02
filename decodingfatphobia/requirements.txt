@@ -1,0 +1,11 @@
+python-dotenv
+requests
+openai
+numpy
+pandas
+
+# Additions:
+openpyxl
+scipy
+matplotlib
+ipykernel

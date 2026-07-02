@@ -1,0 +1,28 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Environment variables
+.env
+
+# macOSgit config --global user.email "your-email@example.com"
+.DS_Store
+
+# Windows
+Thumbs.db
+Desktop.ini
+
+
+# VS Code
+.vscode/
+
+# Generated outputs
+our-work/results/
+
+# Large generated datasets
+*.zip
