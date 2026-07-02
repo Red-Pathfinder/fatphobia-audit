@@ -20,7 +20,7 @@ OUTPUT_DIR = PROJECT_ROOT / "our_work" / "results" / "pilot"
 MODEL_ID = "stabilityai/stable-diffusion-3.5-medium"
 
 # Use 1 first to verify everything works.
-NUM_IMAGES = 20
+NUM_IMAGES = 1
 
 NUM_INFERENCE_STEPS = 28
 GUIDANCE_SCALE = 4.5
@@ -56,7 +56,6 @@ pipe = StableDiffusion3Pipeline.from_pretrained(
 
 pipe.enable_sequential_cpu_offload()
 pipe.enable_attention_slicing()
-pipe.enable_vae_slicing()
 
 print("Model loaded.")
 
