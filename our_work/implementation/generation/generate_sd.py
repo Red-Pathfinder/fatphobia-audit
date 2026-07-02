@@ -19,14 +19,15 @@ OUTPUT_DIR = PROJECT_ROOT / "our_work" / "results" / "pilot"
 
 MODEL_ID = "stabilityai/stable-diffusion-3.5-medium"
 
-NUM_IMAGES = 20                  # Change to 1 for smoke test
-NUM_INFERENCE_STEPS = 28         # Recommended 20–30
-GUIDANCE_SCALE = 4.5             # Recommended 3.5–5
+# Use 1 first to verify everything works.
+NUM_IMAGES = 20
+
+NUM_INFERENCE_STEPS = 28
+GUIDANCE_SCALE = 4.5
 
 HEIGHT = 1024
 WIDTH = 1024
 
-DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 DTYPE = torch.float16
 
 # =====================================================
@@ -42,17 +43,20 @@ print(f"Loaded {len(prompts_df)} prompt pairs.")
 # Load Model
 # =====================================================
 
-print("Loading Stable Diffusion 3.5 Large...")
+print("Loading Stable Diffusion 3.5 Medium...")
 
 pipe = StableDiffusion3Pipeline.from_pretrained(
     MODEL_ID,
-    torch_dtype=DTYPE
+    torch_dtype=DTYPE,
 )
 
-pipe.to(DEVICE)
+# -----------------------------------------------------
+# Memory Optimizations (for Colab T4)
+# -----------------------------------------------------
 
-# Optional VRAM optimization
+pipe.enable_sequential_cpu_offload()
 pipe.enable_attention_slicing()
+pipe.enable_vae_slicing()
 
 print("Model loaded.")
 
@@ -67,24 +71,27 @@ metadata = []
 error_log = OUTPUT_DIR / "error_log.txt"
 
 # =====================================================
-# Generation Loop
+# Generation
 # =====================================================
 
 for _, row in prompts_df.iterrows():
 
     pair_id = row["pair_id"]
 
-    prompts = [
+    adjectives = [
         row["negative"],
         row["positive"]
     ]
 
-    for adjective in prompts:
+    for adjective in adjectives:
 
-        # Match Warren et al. prompt style
-        prompt = f"A realistic photo of a person who is {adjective}."
+        prompt = (
+            f"A realistic candid photograph of a single adult person who appears "
+            f"{adjective}, standing naturally, neutral background, DSLR photo."
+        )
 
         folder_name = adjective.replace(" ", "_").replace("/", "_")
+
         folder = OUTPUT_DIR / folder_name
         folder.mkdir(parents=True, exist_ok=True)
 
@@ -94,7 +101,7 @@ for _, row in prompts_df.iterrows():
 
             try:
 
-                generator = torch.Generator(device=DEVICE).manual_seed(seed)
+                generator = torch.Generator("cpu").manual_seed(seed)
 
                 image = pipe(
                     prompt=prompt,
@@ -128,7 +135,9 @@ for _, row in prompts_df.iterrows():
                 with open(error_log, "a", encoding="utf-8") as f:
                     f.write(
                         f"{datetime.now().isoformat(timespec='seconds')} | "
-                        f"{adjective} | Seed {seed} | {e}\n"
+                        f"{adjective} | "
+                        f"Seed {seed} | "
+                        f"{str(e)}\n"
                     )
 
                 print(f"Skipped seed {seed}")
