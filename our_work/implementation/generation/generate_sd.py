@@ -17,7 +17,7 @@ PROJECT_ROOT = SCRIPT_DIR.parent.parent.parent
 PROMPT_FILE = PROJECT_ROOT / "our_work" / "implementation" / "prompts" / "pilot_prompts.csv"
 OUTPUT_DIR = PROJECT_ROOT / "our_work" / "results" / "pilot"
 
-MODEL_ID = "stabilityai/stable-diffusion-3.5-large"
+MODEL_ID = "stabilityai/stable-diffusion-3.5-medium"
 
 NUM_IMAGES = 20                  # Change to 1 for smoke test
 NUM_INFERENCE_STEPS = 28         # Recommended 20–30
