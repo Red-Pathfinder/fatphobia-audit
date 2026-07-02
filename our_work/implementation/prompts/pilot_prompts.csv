@@ -1,25 +1,25 @@
 pair_id,negative,positive,category,source,include
-01,gluttonous,moderate,eating characteristic,warren,
-02,lazy,diligent,work ethic,warren,
-03,greedy,chsritable,morality,warren,
-04,healthy,unhealthy,health,warren,
-05,Gourmand,Nibbler,eating characteristic,proposed,
-06,entitled ,humble,Wealth&Class,proposed,
-07,Extravagant,Frugal,Expenditure&Spending,proposed,
-08,Sedentary,Energetic,Movement based,proposed,
-09,Undisciplined Eater,Disciplined Eater,Eating habits,proposed,
-10,Undignified,Civilized,,Warren,
-11,Disgusting,Clean,Sanitation,Warren,
-12,Sinful,Virtuous,Morality,Warren,
-13,Immoral,Moral,Morality,Warren,
-14,Inept,Competent,Ability,Warren,
-15,Unintelligent,Intelligent,Mental Capability,Warren,
-16,Bad,Good,,Warren,
-17,Weak-willed,Strong-Willed,Willpower,Warren,
-18,Poor,Wealthy,,Warren,
-19,Ungodly,Godly,Divinity,Warren,
-20,Irrational,Rational,Rationality,Warren,
-21,Sloppy,Put-together,,Warren,
-22,Immoderate,Austere,,Warren,
-23,Gross,Refined,,Warren,
-24,Impure,Pure,Purity,Warren,
+01,gluttonous,moderate,Eating Characteristic,Warren,yes
+02,lazy,diligent,Work Ethic,Warren,yes
+03,greedy,charitable,Morality,Warren,yes
+04,unhealthy,healthy,Health,Warren,yes
+05,gourmand,nibbler,Eating Characteristic,Proposed,no
+06,entitled,humble,Wealth & Class,Proposed,no
+07,extravagant,frugal,Expenditure & Spending,Proposed,no
+08,sedentary,energetic,Movement Based,Proposed,no
+09,undisciplined eater,disciplined eater,Eating Habits,Proposed,no
+10,undignified,civilized,,Warren,no
+11,disgusting,clean,Sanitation,Warren,no
+12,sinful,virtuous,Morality,Warren,no
+13,immoral,moral,Morality,Warren,no
+14,inept,competent,Ability,Warren,no
+15,unintelligent,intelligent,Mental Capability,Warren,no
+16,bad,good,,Warren,no
+17,weak-willed,strong-willed,Willpower,Warren,no
+18,poor,wealthy,,Warren,no
+19,ungodly,godly,Divinity,Warren,no
+20,irrational,rational,Rationality,Warren,no
+21,sloppy,put-together,,Warren,no
+22,immoderate,austere,,Warren,no
+23,gross,refined,,Warren,no
+24,impure,pure,Purity,Warren,no
